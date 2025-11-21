@@ -190,8 +190,9 @@
         .slide-menu {
             position: fixed;
             top: 0;
-            right: -350px;
-            width: 350px;
+            right: -100%;
+            width: 100%;
+            max-width: 350px;
             height: 100vh;
             background: var(--bg-dark);
             border-left: 1px solid var(--border-color);
@@ -736,9 +737,12 @@
                 grid-template-columns: 1fr;
             }
 
+            /* Improved mobile slide menu sizing */
             .slide-menu {
-                width: 280px;
-                right: -280px;
+                width: 100%;
+                max-width: 280px;
+                right: -100%;
+                padding: 30px 20px;
             }
 
             .grid-2, .grid-3 {
@@ -750,8 +754,32 @@
                 text-align: center;
             }
 
-            .pricing-card.featured {
-                transform: scale(1);
+            /* Stack contact info vertically on mobile */
+            .contact-info {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .contact-info-item {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .contact-links {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .contact-links a {
+                display: inline-block;
+                padding: 12px 20px;
+                border-radius: 8px;
+                text-decoration: none;
+                transition: all 0.3s;
+                text-align: center;
             }
         }
     </style>
@@ -1068,24 +1096,27 @@
                         <button type="submit" class="cta-button">Send Message</button>
                     </form>
                 </div>
-                <div>
-                    <div class="card">
+                <div class="contact-info">
+                    <div class="contact-info-item">
                         <h3><i class="fas fa-map-marker-alt"></i> Location</h3>
                         <p>Nairobi, Kenya</p>
                     </div>
-                    <div class="card">
+                    <div class="contact-info-item">
                         <h3><i class="fas fa-phone"></i> Phone</h3>
-                        <p>+254 712 345 678</p>
+                        <div class="contact-links">
+                            <a href="tel:+254703186111" style="background: rgba(0, 102, 255, 0.2); color: var(--primary); margin-bottom: 8px;">
+                                <i class="fas fa-phone"></i> +254 703 186 111
+                            </a>
+                            <a href="https://wa.me/254703186111?text=Hello%20Quantrya" target="_blank" style="background: rgba(76, 175, 80, 0.2); color: #4caf50;">
+                                <i class="fab fa-whatsapp"></i> WhatsApp
+                            </a>
+                        </div>
                     </div>
-                    <div class="card">
+                    <div class="contact-info-item">
                         <h3><i class="fas fa-envelope"></i> Email</h3>
-                        <p>anthonywachiragitahi@gmail.com</p>
-                    </div>
-                    <div class="social-icons">
-                        <a href="https://www.linkedin.com/in/anthony-wachira-094b30215" target="_blank"><i class="fab fa-linkedin"></i></a>
-                        <a href="https://www.instagram.com/anthony_wachira_gitahi" target="_blank"><i class="fab fa-instagram"></i></a>
-                        <a href="https://www.facebook.com/anthony.wachiragitahi" target="_blank"><i class="fab fa-facebook"></i></a>
-                        <a href="https://x.com/AnthonyWachiraG" target="_blank"><i class="fab fa-x-twitter"></i></a>
+                        <a href="mailto:anthonywachiragitahi@gmail.com" style="color: var(--primary); text-decoration: none;">
+                            anthonywachiragitahi@gmail.com
+                        </a>
                     </div>
                 </div>
             </div>
@@ -1165,13 +1196,35 @@
                 return;
             }
 
-            messageDiv.textContent = `Payment of ${amount} KES initiated on ${phone}. Check your phone to complete payment.`;
-            messageDiv.style.color = 'var(--success)';
+            messageDiv.textContent = 'Processing payment...';
+            messageDiv.style.color = '#2196F3';
             messageDiv.style.display = 'block';
 
-            setTimeout(() => {
-                closeMpesaModal();
-            }, 3000);
+            // Call backend to initiate Pesapal payment
+            fetch('/api/pesapal-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phone: phone,
+                    amount: amount,
+                    email: 'customer@example.com'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.redirect_url) {
+                    // Redirect to Pesapal payment page
+                    window.location.href = data.redirect_url;
+                } else if (data.error) {
+                    messageDiv.textContent = 'Payment error: ' + data.error;
+                    messageDiv.style.color = 'var(--danger)';
+                }
+            })
+            .catch(error => {
+                messageDiv.textContent = 'Connection error. Please try again.';
+                messageDiv.style.color = 'var(--danger)';
+                console.error('Payment error:', error);
+            });
         }
 
         function toggleMenu() {
@@ -1199,16 +1252,18 @@
         document.addEventListener('touchmove', (e) => {
             const touchEndX = e.touches[0].clientX;
             const diff = touchStartX - touchEndX;
-            if (diff > 50 && document.getElementById('slideMenu').classList.contains('active')) {
+            if (diff > 30 && document.getElementById('slideMenu').classList.contains('active')) {
                 closeMenu();
+                e.preventDefault();
             }
         });
 
         document.addEventListener('wheel', (e) => {
-            if (e.deltaX > 30 && document.getElementById('slideMenu').classList.contains('active')) {
+            if (e.deltaX > 20 && document.getElementById('slideMenu').classList.contains('active')) {
                 closeMenu();
+                e.preventDefault();
             }
-        });
+        }, { passive: false });
 
         function processPayPalPayment() {
             const amount = prompt('Enter amount to pay:');
